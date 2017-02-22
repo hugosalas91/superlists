@@ -1,11 +1,13 @@
 import sys
 import os
-import poplib
+import imaplib
 import re
 import time
+import email as email_
 from django.core import mail
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
+from .server_tools import reset_database
 
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -14,6 +16,7 @@ class FunctionalTest(StaticLiveServerTestCase):
     def setUpClass(cls):
         for arg in sys.argv:
             if 'liveserver' in arg:
+                cls.server_host = arg.split('=')[1]
                 cls.server_url = 'http://' + arg.split('=')[1]
                 cls.against_staging = True
                 return
@@ -23,10 +26,12 @@ class FunctionalTest(StaticLiveServerTestCase):
     
     @classmethod
     def tearDownClass(cls):
-        if cls.server_url == cls.live_server_url:
+        if not cls.against_staging:
             super().tearDownClass()
     
     def setUp(self):
+        if self.against_staging:
+            reset_database(self.server_host)
         self.browser = webdriver.Chrome()
         self.browser.implicitly_wait(3)
         
@@ -58,27 +63,28 @@ class FunctionalTest(StaticLiveServerTestCase):
             self.assertEqual(email.subject, subject)
             return email.body
 
-        subject_line = 'Subject: {}'.format(subject)
         email_id = None
         start = time.time()
-        inbox = poplib.POP3_SSL('pop.gmail.com')
+        inbox = imaplib.IMAP4_SSL('imap.gmail.com')
         try:
-            inbox.user(test_email)
-            inbox.pass_(os.environ['EMAIL_PASSWORD'])
+            inbox.login(test_email, os.environ['EMAIL_PASSWORD'])
             while time.time() - start < 60:
-                count, _ = inbox.stat()
-                for i in reversed(range(max(1, count - 10), count + 1)):
+                # rv, mailboxes = inbox.list()
+                rv, data = inbox.select("[Gmail]/Todos")
+                rv, data2 = inbox.search(None, "ALL")
+                data3 = data2[0].split()
+                count = len(data3)
+                for i in reversed(range(max(1, count - 10), count)):
                     print('getting msg', i)
-                    _, lines, __ = inbox.retr(i)
-                    lines = [l.decode('utf8') for l in lines]
-                    print(lines)
-                    if subject_line in lines:
+                    rv, data4 = inbox.fetch(data3[i], '(RFC822)')
+                    msg = data4[0][1].decode('utf8')
+                    msg2 = email_.message_from_string(msg)
+                    if subject in msg2['Subject']:
                         email_id = i
-                        body = '\n'.join(lines)
+                        body = msg2._payload
                         return body
                 time.sleep(5)
         finally:
-            if email_id:
-                inbox.dele(email_id)
-            inbox.quit()
+            inbox.close()
+            inbox.logout()
         
