@@ -7,12 +7,9 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    
-    def add_arguments(self, parser):
-        parser.add_argument('email')
         
-    def handle(self, *args, **options):
-        session_key = create_pre_authenticated_session(options['email'])
+    def handle(self, email, *_, **__):
+        session_key = create_pre_authenticated_session(email)
         self.stdout.write(session_key)        
         
         
