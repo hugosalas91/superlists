@@ -9,7 +9,7 @@ def create_session_on_server(host, email):
         [
             'fab', 
             'create_session_on_server:email={}'.format(email), 
-            '--host={}'.format(host), 
+            '--host=elspeth@{}'.format(host), 
             '--hide=everything,status',
         ],
         cwd=THIS_FOLDER
@@ -18,6 +18,6 @@ def create_session_on_server(host, email):
     
 def reset_database(host):
     subprocess.check_call(
-        ['fab', 'reset_database', '--host={}'.format(host)], 
+        ['fab', 'reset_database', '--host=elspeth@{}'.format(host)], 
         cwd=THIS_FOLDER
     )
