@@ -10,6 +10,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
 from .server_tools import reset_database
 
+DEFAULT_WAIT = 5
 SCREEN_DUMP_LOCATION = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'screendumps'
 )
@@ -38,7 +39,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         if self.against_staging:
             reset_database(self.server_host)
         self.browser = webdriver.Chrome()
-        self.browser.implicitly_wait(3)
+        self.browser.implicitly_wait(DEFAULT_WAIT)
         
     def tearDown(self):
         if self._test_has_failed():
